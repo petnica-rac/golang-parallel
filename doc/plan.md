@@ -67,13 +67,52 @@ The server now returns real HTML pages with links to other pages. The instructor
 
 ## Block 3 — WaitGroup & Mutex (~60 min)
 
-*To be planned.*
+### Goal
+
+Students fix both open problems from Block 2 — the hardcoded goroutine count and the lack of cycle prevention — and end up with a crawler that genuinely drives itself by following links. This is the first version of the program that feels like a real crawler rather than a parallel fetcher.
+
+> **Note for instructor:** This block has more moving parts than any previous one. The shift from a flat fetch loop to a recursive concurrent crawl is a meaningful conceptual jump. Prepare to spend time walking students through the overall structure before they start writing. The concepts themselves (WaitGroup, Mutex) are simple — the challenge is how they fit together in a recursive pattern.
+
+### Flow
+
+**1. The concept**
+WaitGroup: Add before launching a goroutine, Done when it finishes, Wait blocks until the counter reaches zero. Mutex: Lock before touching shared state, Unlock when done. Keep the explanation brief — both primitives are intuitive once students see them in context.
+
+**2. Core assignment — WaitGroup**
+Replace the `for range urls` counting loop with a WaitGroup. This is a clean mechanical change. Students should feel how much more natural it is compared to counting goroutines manually or sleeping.
+
+**3. Core assignment — Mutex and recursive crawl**
+Add a visited map protected by a Mutex. Start from a single seed URL, follow discovered links, and launch a new goroutine for each unvisited URL. The crawler now drives itself. Students should observe it working — and then notice the goroutine count climbing without bound as the graph is explored. That observation is the bridge into Block 4.
+
+### Stretch Goals
+
+- Print `runtime.NumGoroutine()` periodically to watch goroutine count grow during a crawl.
+- Swap `sync.Mutex` for `sync.RWMutex` on the visited map — when does the distinction matter?
+- Add a depth limit to prevent the crawler from going too deep into the graph.
 
 ---
 
 ## Block 4 — Worker Pool (~60 min)
 
-*To be planned.*
+### Goal
+
+Students fix the unbounded goroutine problem from Block 3. The crawler stops spawning a goroutine per URL and instead feeds work into a fixed pool of workers. By the end, concurrency is explicit and controlled — and students have a complete, well-behaved crawler before lunch.
+
+### Flow
+
+**1. The concept**
+Brief framing: spawning one goroutine per unit of work is fine for small inputs, but doesn't scale. A worker pool caps concurrency at a fixed number regardless of input size. The jobs channel becomes the queue; workers are long-lived goroutines that pull from it.
+
+**2. Core assignment**
+Replace the per-URL goroutine launch with a fixed pool of worker goroutines reading from a buffered jobs channel. The main challenge students will encounter is termination: how does the program know when to close the jobs channel? Walk them through tracking pending jobs with a WaitGroup (separate from the worker lifecycle), closing the channel in a goroutine so main can still block cleanly.
+
+**3. Wrap-up**
+By the end of this block students have a crawler that is concurrent, safe, and resource-controlled. A good moment to step back and look at the whole program — it has come a long way from the sequential fetcher in Block 1.
+
+### Stretch Goals
+
+- Make `numWorkers` a command-line flag. Experiment with different values — does more workers always mean faster? Where does the server become the bottleneck?
+- Set `numWorkers` to 1 and time the crawl. Compare to Block 1's sequential run. Why is it not identical?
 
 ---
 
