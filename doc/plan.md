@@ -122,10 +122,49 @@ By the end of this block students have a crawler that is concurrent, safe, and r
 
 ## Block 5 — Pipeline (~60 min)
 
-*To be planned.*
+### Goal
+
+Students extend the crawler with a second processing stage, forming a pipeline. The key insight is that different stages have different concurrency characteristics — IO-bound and CPU-bound work call for different worker counts and for different reasons. By the end, students have a crawler that not only fetches pages but does meaningful work on their content.
+
+### Flow
+
+**1. The concept**
+Brief framing: a pipeline connects stages with channels. Each stage runs independently at its own pace. Data flows through — one stage's output is the next stage's input. Contrast with the worker pool: a pool parallelises one task, a pipeline parallelises a sequence of tasks.
+
+**2. Core assignment**
+Split the fetch worker's responsibility: instead of doing everything inline, fetch workers now send `{url, body}` pairs on a channel to a second pool of compression workers. Compression workers gzip the body and record the compression ratio. Each pool has its own worker count constant.
+
+**3. The discussion**
+Once it works, ask students: what's the right number of workers for each stage? Fetch workers spend most of their time blocked on the network — more workers is fine, the CPU sits idle while they wait. Compress workers are pure CPU — beyond `runtime.NumCPU()` workers you gain nothing and start paying context switching overhead. This is where `GOMAXPROCS` becomes a concrete, observable concept rather than an abstract one.
+
+### Stretch Goals
+
+- Experiment with compress worker counts — time the crawl at 1, 2, 4, and `runtime.NumCPU()` workers. Plot or note where adding more stops helping.
+- Set `GOMAXPROCS=1` and observe the effect on the compression phase specifically.
 
 ---
 
 ## Block 6 — Context & Cancellation (~45 min)
 
-*To be planned.*
+### Goal
+
+Students add graceful cancellation to the crawler. The program currently has no way to stop cleanly — it either finishes or gets killed. By the end of this block it can time itself out automatically and respond to Ctrl+C with a clean shutdown. This is also a natural return to `select`, now used not as a timeout hack but as the core mechanism for watching both work and cancellation at the same time.
+
+### Flow
+
+**1. The concept**
+Brief framing: `context.Context` is Go's standard way to propagate a cancellation signal through a call tree. Any function that does IO should accept and respect a context — this is a pattern students will use in every real Go program they write.
+
+**2. Core assignment — timeout**
+Wrap the crawl in a `context.WithTimeout`. Pass the context through to HTTP requests via `http.NewRequestWithContext` so in-flight fetches are actually cancelled when the deadline fires, not just abandoned. Update the worker loops to `select` on both the jobs channel and `ctx.Done()` so they stop picking up new work the moment cancellation fires.
+
+**3. Core assignment — signal handling**
+Wire up `signal.NotifyContext` so Ctrl+C triggers the same cancellation path. The program now shuts down cleanly on interrupt rather than dying abruptly. Students should observe the difference: the summary line still prints, in-flight requests are cancelled, and no goroutines are left hanging.
+
+**4. Wrap-up**
+Step back and look at the full program. It started as a sequential fetcher that took ten seconds to fetch twenty URLs. It is now a concurrent, rate-limited, pipelined crawler with graceful cancellation. Each block added one idea, and none of it was thrown away.
+
+### Stretch Goals
+
+- `context.WithDeadline` vs `context.WithTimeout` — what is the practical difference?
+- **(End-of-workshop)** Add a word frequency stage aside compression — find the top 10 most common words across all crawled pages.

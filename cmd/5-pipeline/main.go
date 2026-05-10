@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -13,13 +15,21 @@ import (
 )
 
 const (
-	baseURL    = "http://localhost:8080"
-	numWorkers = 5
+	baseURL         = "http://localhost:8080"
+	numFetchWorkers = 10
 )
+
+var numCompressWorkers = runtime.NumCPU()
+
+type page struct {
+	url  string
+	body []byte
+}
 
 var (
 	jobs    = make(chan string, 100)
-	wg      sync.WaitGroup
+	pages   = make(chan page, 100)
+	fetchWg sync.WaitGroup
 	mu      sync.Mutex
 	visited = make(map[string]bool)
 )
@@ -51,8 +61,8 @@ func extractLinks(r io.Reader) []string {
 	return links
 }
 
-func crawl(url string) {
-	defer wg.Done()
+func fetch(url string) {
+	defer fetchWg.Done()
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -67,15 +77,14 @@ func crawl(url string) {
 		return
 	}
 
-	links := extractLinks(bytes.NewReader(body))
-	fmt.Printf("fetched %s (%d bytes, %d links)\n", url, len(body), len(links))
+	fmt.Printf("fetched %s (%d bytes)\n", url, len(body))
 
-	for _, link := range links {
+	for _, link := range extractLinks(bytes.NewReader(body)) {
 		mu.Lock()
 		unseen := !visited[link]
 		if unseen {
 			visited[link] = true
-			wg.Add(1)
+			fetchWg.Add(1)
 		}
 		mu.Unlock()
 
@@ -83,27 +92,50 @@ func crawl(url string) {
 			jobs <- link
 		}
 	}
+
+	pages <- page{url: url, body: body}
+}
+
+func compress(p page) {
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+	w.Write(p.body)
+	w.Close()
+	ratio := float64(buf.Len()) / float64(len(p.body)) * 100
+	fmt.Printf("compressed %s: %d → %d bytes (%.1f%%)\n", p.url, len(p.body), buf.Len(), ratio)
 }
 
 func main() {
-	for range numWorkers {
+	for range numFetchWorkers {
 		go func() {
 			for url := range jobs {
-				crawl(url)
+				fetch(url)
+			}
+		}()
+	}
+
+	var compressWg sync.WaitGroup
+	for range numCompressWorkers {
+		compressWg.Add(1)
+		go func() {
+			defer compressWg.Done()
+			for p := range pages {
+				compress(p)
 			}
 		}()
 	}
 
 	seed := baseURL + "/page/1"
-
 	visited[seed] = true
 
 	start := time.Now()
-	wg.Add(1)
+	fetchWg.Add(1)
 	jobs <- seed
 
-	wg.Wait()
+	fetchWg.Wait()
 	close(jobs)
+	close(pages)
+	compressWg.Wait()
 
 	fmt.Printf("\ncrawled %d pages in %v\n", len(visited), time.Since(start))
 }

@@ -59,6 +59,40 @@ func linksForPage(n, total int) []int {
 	return links
 }
 
+// wordList is a set of common English words used to generate realistic page content.
+var wordList = []string{
+	"the", "be", "to", "of", "and", "a", "in", "that", "have", "it",
+	"for", "not", "on", "with", "as", "you", "do", "at", "this", "but",
+	"by", "from", "they", "we", "say", "she", "or", "an", "will", "my",
+	"one", "all", "would", "there", "their", "what", "so", "up", "out",
+	"if", "about", "who", "get", "which", "go", "when", "make", "can",
+	"like", "time", "no", "just", "know", "take", "people", "into", "year",
+	"your", "good", "some", "could", "them", "see", "other", "than", "then",
+	"now", "look", "only", "come", "over", "think", "also", "back", "after",
+	"use", "two", "how", "our", "work", "first", "well", "way", "even",
+	"new", "want", "because", "any", "these", "give", "day", "most", "us",
+	"great", "between", "need", "large", "often", "hand", "high", "place",
+	"hold", "turn", "where", "much", "before", "move", "right", "boy",
+	"old", "too", "same", "tell", "does", "set", "three", "want", "air",
+	"play", "small", "number", "off", "always", "next", "show", "every",
+	"near", "add", "food", "between", "own", "below", "country", "plant",
+	"last", "school", "father", "keep", "tree", "never", "start", "city",
+	"earth", "eye", "light", "thought", "head", "under", "story", "saw",
+	"left", "don't", "few", "while", "along", "might", "close", "something",
+	"seem", "next", "hard", "open", "example", "begin", "life", "always",
+}
+
+func randText(size int) string {
+	var b strings.Builder
+	for b.Len() < size {
+		if b.Len() > 0 {
+			b.WriteByte(' ')
+		}
+		b.WriteString(wordList[rand.Intn(len(wordList))])
+	}
+	return b.String()[:size]
+}
+
 func randDelay() {
 	delta := int64(*maxDelay - *minDelay)
 	d := *minDelay
@@ -88,7 +122,7 @@ func handlePage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	pageTmpl.Execute(w, pageData{
 		N:       n,
-		Content: strings.Repeat("x", size),
+		Content: randText(size),
 		Links:   linksForPage(n, *pageCount),
 	})
 }

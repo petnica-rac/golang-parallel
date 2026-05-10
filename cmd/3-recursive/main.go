@@ -82,9 +82,7 @@ func main() {
 
 	start := time.Now()
 
-	mu.Lock()
 	visited[seed] = true
-	mu.Unlock()
 
 	wg.Add(1)
 	go crawl(seed)

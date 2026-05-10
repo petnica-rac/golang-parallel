@@ -18,15 +18,15 @@ go run ./cmd/server [flags]
 | `-max-delay` | `500ms` | Maximum artificial delay per request |
 | `-min-size` | `512` | Minimum response body size in bytes |
 | `-max-size` | `2048` | Maximum response body size in bytes |
-| `-slow-prob` | `0.5` | Probability (0.0–1.0) that a request also sleeps for `-slow-delay` |
-| `-slow-delay` | `2s` | Extra delay applied to slow requests |
+| `-slow-prob` | `0.0` | Probability (0.0–1.0) that a request also sleeps for `-slow-delay` |
+| `-slow-delay` | `5s` | Extra delay applied to slow requests |
 
 ## Endpoints
 
 `GET /page/{n}` — serves page `n` (1-indexed, up to `-pages`). Returns 404 for out-of-range values.
 
 Each page is a valid HTML document containing:
-- A `<p>` tag with filler content (size controlled by `-min-size` / `-max-size`)
+- A `<p>` tag with randomly generated English text (size controlled by `-min-size` / `-max-size`)
 - A `<ul>` of 3–5 `<a href>` links to other pages in the graph
 
 The link graph is deterministic — page `n` always links to the same set of pages regardless of server restarts or request order. This keeps crawl behaviour reproducible across students.
