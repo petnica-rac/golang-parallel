@@ -28,12 +28,3 @@ runtime.NumCPU() // returns int
 ```
 
 Useful for deciding how many CPU-bound workers to run.
-
-## Multiple WaitGroups
-
-Each stage can have its own WaitGroup to track its own workers independently:
-
-```go
-var fetchWg sync.WaitGroup
-var compressWg sync.WaitGroup
-```
