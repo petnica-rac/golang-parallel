@@ -2,27 +2,6 @@
 
 Extend the crawler with a second stage that processes each fetched page. Instead of handling everything in the fetching logic, send each page's content to a separate pool of workers that compress it and report the compression ratio. The two pools run independently and are connected by a channel — this is the pipeline pattern.
 
-## Passing data between stages
-
-Define a struct to carry a page between stages:
-
-```go
-type page struct {
-    url  string
-    body []byte
-}
-
-pages := make(chan page, 100)
-
-// producer sends
-pages <- page{url: "...", body: data}
-
-// consumer receives
-for p := range pages {
-    // process p.url and p.body
-}
-```
-
 ## gzip compression
 
 ```go
