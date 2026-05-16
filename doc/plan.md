@@ -168,3 +168,26 @@ Step back and look at the full program. It started as a sequential fetcher that 
 
 - `context.WithDeadline` vs `context.WithTimeout` — what is the practical difference?
 - **(End-of-workshop)** Add a word frequency stage aside compression — find the top 10 most common words across all crawled pages.
+
+---
+
+## Extra Task — Word Frequency (if time remains)
+
+If the workshop finishes early, students work through an independent task that applies the same concurrency concepts to a completely different problem — no server, no network, no shared code with the crawler.
+
+See `doc/materials/extra_task.md` for the student-facing reference sheet.
+
+### The task
+
+Build a tool that counts word frequencies across a directory of `.txt` files and prints the top 20 words. A generator (`cmd/extra_task/gen`) produces the input files. Students implement the solution from scratch in `cmd/extra_task`.
+
+### What's new
+
+Everything concurrency-related (worker pool, WaitGroup, channels) is familiar from the workshop. The new pieces are:
+- Reading a file with `bufio.Scanner` and `bufio.ScanWords`
+- Listing directory contents with `os.ReadDir`
+- Sorting a map by value by converting it to a slice
+
+### Discussion point
+
+Once students have a working solution, ask: how did you merge the per-file maps? A channel of maps collected and merged sequentially in main, versus a shared map protected by a Mutex, are both valid — and they trade off simplicity against goroutine utilisation in different ways.
