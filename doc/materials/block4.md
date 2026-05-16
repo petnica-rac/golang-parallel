@@ -11,31 +11,18 @@ ch <- "value"  // does not block if buffer has space
 v := <-ch      // does not block if buffer has items
 ```
 
-## Worker pool pattern
+## Range over channel
 
 ```go
-jobs := make(chan string, 100)
-
-// start N workers
-for range N {
-    go func() {
-        for job := range jobs {
-            process(job)
-        }
-    }()
+for item := range ch {
+    do_something(item)
 }
 
-// send work
-jobs <- "url1"
-jobs <- "url2"
+// send things that need doing
+ch <- "thing1"
+ch <- "thing2"
 
-// signal workers to stop
-close(jobs)
-```
-
-## Closing a channel
-
-```go
+// signal to stop
 close(ch)
 ```
 
