@@ -7,20 +7,51 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+		log.Fatalf("invalid value for %s: %q", key, v)
+	}
+	return def
+}
+
+func envFloat64(key string, def float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+		log.Fatalf("invalid value for %s: %q", key, v)
+	}
+	return def
+}
+
+func envDuration(key string, def time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+		log.Fatalf("invalid value for %s: %q", key, v)
+	}
+	return def
+}
+
 var (
-	port      = flag.Int("port", 8080, "port to listen on")
-	minDelay  = flag.Duration("min-delay", 200*time.Millisecond, "minimum response delay")
-	maxDelay  = flag.Duration("max-delay", 500*time.Millisecond, "maximum response delay")
-	minSize   = flag.Int("min-size", 512, "minimum response body size in bytes")
-	maxSize   = flag.Int("max-size", 2048, "maximum response body size in bytes")
-	pageCount = flag.Int("pages", 20, "total number of pages to serve")
-	slowProb  = flag.Float64("slow-prob", 0, "probability (0.0-1.0) that a request also sleeps for slow-delay")
-	slowDelay = flag.Duration("slow-delay", 5*time.Second, "extra delay applied to slow requests")
+	port      = flag.Int("port", envInt("PORT", 8080), "port to listen on")
+	minDelay  = flag.Duration("min-delay", envDuration("MIN_DELAY", 200*time.Millisecond), "minimum response delay")
+	maxDelay  = flag.Duration("max-delay", envDuration("MAX_DELAY", 500*time.Millisecond), "maximum response delay")
+	minSize   = flag.Int("min-size", envInt("MIN_SIZE", 512), "minimum response body size in bytes")
+	maxSize   = flag.Int("max-size", envInt("MAX_SIZE", 2048), "maximum response body size in bytes")
+	pageCount = flag.Int("pages", envInt("PAGES", 20), "total number of pages to serve")
+	slowProb  = flag.Float64("slow-prob", envFloat64("SLOW_PROB", 0), "probability (0.0-1.0) that a request also sleeps for slow-delay")
+	slowDelay = flag.Duration("slow-delay", envDuration("SLOW_DELAY", 5*time.Second), "extra delay applied to slow requests")
 )
 
 var pageTmpl = template.Must(template.New("page").Parse(`<!DOCTYPE html>
