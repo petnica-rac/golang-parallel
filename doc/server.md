@@ -2,11 +2,32 @@
 
 The workshop uses a local Go HTTP server that all students point their crawlers at. It serves a graph of HTML pages with internal links, simulates realistic network latency, and can be configured to misbehave in ways that motivate specific concurrency solutions.
 
-Run with:
+Run locally with:
 
 ```
 go run ./cmd/server [flags]
 ```
+
+## Deployment
+
+The server is deployed on fly.io. To redeploy after changing configuration:
+
+```
+fly deploy
+```
+
+Environment variables can be set in the `[env]` section of `fly.toml` — all flags have a corresponding env var (same name, uppercase). For example:
+
+```toml
+[env]
+  SLOW_PROB = "0.2"
+  SLOW_DELAY = "5s"
+  MIN_DELAY = "1s"
+  MAX_DELAY = "2s"
+  PAGES = "30"
+```
+
+Update `fly.toml` to match the desired configuration for each block, then run `fly deploy` before the session.
 
 ## Flags
 
